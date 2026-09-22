@@ -91,8 +91,24 @@ col1, col2, col3, col4 = st.columns(4)
 
 col1.metric("Income", f"₹{income_total:,.2f}")
 col2.metric("Expenses", f"₹{expense_total:,.2f}")
-col3.metric("Net amount", f"₹{net_amount:,.2f}")
+net_label = "Surplus" if net_amount >= 0 else "Deficit"
+
+col3.metric(
+    net_label,
+    f"₹{net_amount:,.2f}",
+)
 col4.metric("Transactions", f"{len(filtered_df):,}")
+
+if net_amount < 0:
+    st.warning(
+        f"Your recorded expenses exceed your recorded income by "
+        f"₹{abs(net_amount):,.2f}."
+    )
+else:
+    st.success(
+        f"Your recorded income exceeds your expenses by "
+        f"₹{net_amount:,.2f}."
+    )
 
 st.subheader("Monthly cash flow")
 
