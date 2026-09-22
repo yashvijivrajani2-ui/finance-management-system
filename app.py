@@ -1,5 +1,6 @@
 from pathlib import Path
 
+import matplotlib.pyplot as plt
 import pandas as pd
 import streamlit as st
 
@@ -28,6 +29,9 @@ def load_data():
         errors="coerce",
     )
 
+    if df["Date"].isna().any():
+        raise ValueError("Some dates could not be parsed.")
+
     df["Amount_INR"] = df["INR"]
 
     return df
@@ -36,7 +40,7 @@ def load_data():
 df = load_data()
 
 st.title("Personal Finance Dashboard")
-st.caption("Income and expense analysis")
+st.caption("Income, expense, and spending analysis")
 
 st.sidebar.header("Filters")
 
@@ -91,17 +95,15 @@ col1, col2, col3, col4 = st.columns(4)
 
 col1.metric("Income", f"₹{income_total:,.2f}")
 col2.metric("Expenses", f"₹{expense_total:,.2f}")
-net_label = "Surplus" if net_amount >= 0 else "Deficit"
 
-col3.metric(
-    net_label,
-    f"₹{net_amount:,.2f}",
-)
+net_label = "Surplus" if net_amount >= 0 else "Deficit"
+col3.metric(net_label, f"₹{net_amount:,.2f}")
+
 col4.metric("Transactions", f"{len(filtered_df):,}")
 
 if net_amount < 0:
     st.warning(
-        f"Your recorded expenses exceed your recorded income by "
+        f"Your recorded expenses exceed your income by "
         f"₹{abs(net_amount):,.2f}."
     )
 else:
@@ -144,9 +146,28 @@ category_summary = (
     .sort_values("Total_INR", ascending=False)
 )
 
-st.bar_chart(
-    category_summary.set_index("Category")[["Total_INR"]]
-)
+if category_summary.empty:
+    st.info("No expense data matches the selected filters.")
+else:
+    st.bar_chart(
+        category_summary.set_index("Category")[["Total_INR"]],
+        horizontal=True,
+    )
+
+st.subheader("Expense distribution")
+
+if not category_summary.empty:
+    fig, ax = plt.subplots(figsize=(8, 5))
+
+    ax.pie(
+        category_summary["Total_INR"],
+        labels=category_summary["Category"],
+        autopct="%1.1f%%",
+    )
+
+    ax.set_title("Expense Distribution")
+    st.pyplot(fig)
+    plt.close(fig)
 
 st.subheader("Transactions")
 
@@ -160,6 +181,9 @@ display_columns = [
 ]
 
 st.dataframe(
-    filtered_df[display_columns].sort_values("Date", ascending=False),
-    use_container_width=True,
+    filtered_df[display_columns].sort_values(
+        "Date",
+        ascending=False,
+    ),
+    width="stretch"
 )
